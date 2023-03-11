@@ -1,0 +1,23 @@
+<h1>My Cart</h1>
+
+<%= if @cart.items == [] do %>
+  Your cart is empty
+<% else %>
+  <.form :let={f} for={@changeset} action={~p"/cart"}>
+    <ul>
+      <%= for item_form <- inputs_for(f, :items), item = item_form.data do %>
+        <li>
+          <%= hidden_inputs_for(item_form) %>
+          <%= item.product.title %>
+          <%= number_input item_form, :quantity %>
+          <%= currency_to_str(ShoppingCart.total_item_price(item)) %>
+        </li>
+      <% end %>
+    </ul>
+
+    <%= submit "update cart" %>
+  </.form>
+
+  <b>Total</b>: <%= currency_to_str(ShoppingCart.total_cart_price(@cart)) %>
+  <.link href={~p"/orders"} method="post">complete order</.link>
+<% end %>
