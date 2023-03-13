@@ -1,6 +1,8 @@
 defmodule DemoWeb.Router do
   use DemoWeb, :router
 
+  import DemoWeb.ArgonusersAuth
+
   pipeline :browser do
     plug :accepts, ["html", "text"]
     plug :fetch_session
@@ -8,9 +10,15 @@ defmodule DemoWeb.Router do
     plug :put_root_layout, {DemoWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_current_argonusers
     plug DemoWeb.Plugs.Locale, "en"
     plug :fetch_current_user
     plug :fetch_current_cart
+  end
+
+  pipeline :authreq do
+    plug :fetch_current_argonusers
+    plug :require_authenticated_argonusers
   end
 
   defp fetch_current_user(conn, _) do
@@ -47,6 +55,8 @@ defmodule DemoWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+
+    pipe_through :authreq
     resources "/products", ProductController
     resources "/users", UserController
     get "/hello", HelloController, :index
@@ -82,5 +92,38 @@ defmodule DemoWeb.Router do
       live_dashboard "/dashboard", metrics: DemoWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
+  end
+
+  ## Authentication routes
+
+  scope "/", DemoWeb do
+    pipe_through [:browser, :redirect_if_argonusers_is_authenticated]
+
+    get "/argonusers/register", ArgonusersRegistrationController, :new
+    post "/argonusers/register", ArgonusersRegistrationController, :create
+    get "/argonusers/log_in", ArgonusersSessionController, :new
+    post "/argonusers/log_in", ArgonusersSessionController, :create
+    get "/argonusers/reset_password", ArgonusersResetPasswordController, :new
+    post "/argonusers/reset_password", ArgonusersResetPasswordController, :create
+    get "/argonusers/reset_password/:token", ArgonusersResetPasswordController, :edit
+    put "/argonusers/reset_password/:token", ArgonusersResetPasswordController, :update
+  end
+
+  scope "/", DemoWeb do
+    pipe_through [:browser, :require_authenticated_argonusers]
+
+    get "/argonusers/settings", ArgonusersSettingsController, :edit
+    put "/argonusers/settings", ArgonusersSettingsController, :update
+    get "/argonusers/settings/confirm_email/:token", ArgonusersSettingsController, :confirm_email
+  end
+
+  scope "/", DemoWeb do
+    pipe_through [:browser]
+
+    delete "/argonusers/log_out", ArgonusersSessionController, :delete
+    get "/argonusers/confirm", ArgonusersConfirmationController, :new
+    post "/argonusers/confirm", ArgonusersConfirmationController, :create
+    get "/argonusers/confirm/:token", ArgonusersConfirmationController, :edit
+    post "/argonusers/confirm/:token", ArgonusersConfirmationController, :update
   end
 end

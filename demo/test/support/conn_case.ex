@@ -35,4 +35,30 @@ defmodule DemoWeb.ConnCase do
     Demo.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
+
+  @doc """
+  Setup helper that registers and logs in argonusers.
+
+      setup :register_and_log_in_argonusers
+
+  It stores an updated connection and a registered argonusers in the
+  test context.
+  """
+  def register_and_log_in_argonusers(%{conn: conn}) do
+    argonusers = Demo.AccountsFixtures.argonusers_fixture()
+    %{conn: log_in_argonusers(conn, argonusers), argonusers: argonusers}
+  end
+
+  @doc """
+  Logs the given `argonusers` into the `conn`.
+
+  It returns an updated `conn`.
+  """
+  def log_in_argonusers(conn, argonusers) do
+    token = Demo.Accounts.generate_argonusers_session_token(argonusers)
+
+    conn
+    |> Phoenix.ConnTest.init_test_session(%{})
+    |> Plug.Conn.put_session(:argonusers_token, token)
+  end
 end
